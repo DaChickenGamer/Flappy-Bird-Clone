@@ -1,6 +1,7 @@
 from random import random, randint
 
 import pygame
+from pygame.examples.moveit import WIDTH
 
 screenWidth = 800
 screenHeight = 800
@@ -27,7 +28,7 @@ pipe_list = []
 
 class Pipe:
     def __init__(self):
-        gap = 200
+        gap = 250
 
         random_pipe_length = randint(100, screenHeight - gap - 100)
 
@@ -57,6 +58,9 @@ class Pipe:
         self.bottom_pipe.x -= 3
         self.top_pipe.x -= 3
 
+        if playerPosition.colliderect(self.top_pipe) or playerPosition.colliderect(self.bottom_pipe):
+            game_state.game_over()
+
         if self.bottom_pipe.x < screenWidth / 2 and not self.made_next_pipe:
             new_pipe = Pipe()
             pipe_list.append(new_pipe)
@@ -72,31 +76,80 @@ class Pipe:
     #
     #     return self.bottom_pipe.x
 
-testPipe = Pipe()
-testPipe.make_pipe()
+firstPipe = Pipe()
+firstPipe.make_pipe()
 
-while running:
+class GameState:
+    def __init__(self):
+        self.current_state = "StartMenu"
 
-    for pipe in pipe_list:
-        pipe.move_pipe()
+    def change_state(self, new_state):
+        self.current_state = new_state
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        pressed = pygame.key.get_pressed()
-        if pressed[pygame.K_SPACE]:
-            playerPosition.y -= 45
-        if pressed[pygame.K_ESCAPE]:
-            pygame.quit()
+        if new_state == "StartMenu":
+            game_state.start_menu()
+        elif new_state == "GameOver":
+            game_state.game_over()
+        elif new_state == "Pause":
+            game_state.pause()
+        elif new_state == "StartGame":
+            game_state.start_game()
 
-    playerPosition.y += 3
+    def pause(self):
+        self.current_state = "Pause"
+    def start_menu(self):
+        self.current_state = "StartMenu"
 
-    screen.fill((0, 0, 0))
+    def game_over(self):
+        self.current_state = "GameOver"
+        pygame.font.init()
+        game_over_text = pygame.font.SysFont('Times New Roman', 50).render("GAME OVER", True, (255, 255, 255))
 
-    screen.blit(playerImage, playerPosition)
-    for pipe in pipe_list:
-        screen.blit(pipe.scaled_pipe_image, pipe.top_pipe)
-        screen.blit(pipe.flipped_pipe_image, pipe.bottom_pipe)
+        text_rect = game_over_text.get_rect()
 
-    pygame.display.update()
-    clock.tick(60)
+        text_rect.center = (screenWidth / 2, screenHeight / 2)
+
+        screen.fill((0, 0, 0))
+        screen.blit(game_over_text, text_rect)
+
+        pygame.display.update()
+
+        time_elapsed = 0
+        while time_elapsed < 5000:
+            pygame.time.delay(100)
+            time_elapsed += 100
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
+
+        self.change_state("StartMenu")
+
+    def start_game(self):
+        self.current_state = "StartGame"
+        while self.current_state == "StartGame":
+            for event in pygame.event.get():
+                pressed = pygame.key.get_pressed()
+                if pressed[pygame.K_SPACE]:
+                    playerPosition.y -= 45
+                if pressed[pygame.K_ESCAPE]:
+                    pygame.quit()
+
+            playerPosition.y += 3
+
+            screen.fill((0, 0, 0))
+
+            screen.blit(playerImage, playerPosition)
+
+            for pipe in pipe_list:
+                screen.blit(pipe.scaled_pipe_image, pipe.top_pipe)
+                screen.blit(pipe.flipped_pipe_image, pipe.bottom_pipe)
+                pipe.move_pipe()
+
+            pygame.display.update()
+            clock.tick(60)
+
+game_state = GameState()
+
+game_state.start_game()
