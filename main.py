@@ -1,7 +1,5 @@
-from random import random, randint
-
 import pygame
-from pygame.examples.moveit import WIDTH
+from random import randint
 
 screenWidth = 800
 screenHeight = 800
@@ -21,20 +19,14 @@ playerPosition.x = screenWidth / 2
 pygame.display.update()
 clock = pygame.time.Clock()
 
-running = True
 pipe_list = []
-
-
 
 class Pipe:
     def __init__(self):
         gap = 250
-
         random_pipe_length = randint(100, screenHeight - gap - 100)
-
         pipe_image = pygame.image.load("images/flappybird.png")
         pipe_image = pygame.transform.rotate(pipe_image, 180)
-
         self.scaled_pipe_image = pygame.transform.scale(pipe_image, (50, random_pipe_length))
 
         bottom_pipe_height = screenHeight - random_pipe_length - gap
@@ -51,15 +43,15 @@ class Pipe:
         self.bottom_pipe.x = screenWidth
 
         self.made_next_pipe = False
+
     def make_pipe(self):
         pipe_list.append(self)
 
     def move_pipe(self):
         self.bottom_pipe.x -= 3
         self.top_pipe.x -= 3
-
         if playerPosition.colliderect(self.top_pipe) or playerPosition.colliderect(self.bottom_pipe):
-            game_state.game_over()
+            game_state.change_state("GameOver")
 
         if self.bottom_pipe.x < screenWidth / 2 and not self.made_next_pipe:
             new_pipe = Pipe()
@@ -69,16 +61,6 @@ class Pipe:
         if self.bottom_pipe.x < 0:
             pipe_list.remove(self)
 
-    # def get_pipe_x(self):
-    #     if not self.bottom_pipe.x == self.top_pipe.x:
-    #         print("Error, Pipe X Doesn't Match")
-    #         return
-    #
-    #     return self.bottom_pipe.x
-
-firstPipe = Pipe()
-firstPipe.make_pipe()
-
 class GameState:
     def __init__(self):
         self.current_state = "StartMenu"
@@ -87,18 +69,41 @@ class GameState:
         self.current_state = new_state
 
         if new_state == "StartMenu":
-            game_state.start_menu()
+            self.start_menu()
         elif new_state == "GameOver":
-            game_state.game_over()
-        elif new_state == "Pause":
-            game_state.pause()
+            self.game_over()
         elif new_state == "StartGame":
-            game_state.start_game()
+            self.start_game()
 
-    def pause(self):
-        self.current_state = "Pause"
     def start_menu(self):
         self.current_state = "StartMenu"
+        while self.current_state == "StartMenu":
+            screen.fill((0, 0, 0))
+
+            title_text = pygame.font.SysFont('Times New Roman', 60).render("Flappy Bird", True, (255, 255, 255))
+            title_rect = title_text.get_rect(center=(screenWidth / 2, screenHeight / 4))
+            screen.blit(title_text, title_rect)
+
+            start_text = pygame.font.SysFont('Arial', 40).render("Press ENTER to Start", True, (255, 255, 255))
+            start_rect = start_text.get_rect(center=(screenWidth / 2, screenHeight / 2))
+            screen.blit(start_text, start_rect)
+
+            quit_text = pygame.font.SysFont('Arial', 40).render("Press ESC to Quit", True, (255, 255, 255))
+            quit_rect = quit_text.get_rect(center=(screenWidth / 2, screenHeight * 3 / 4))
+            screen.blit(quit_text, quit_rect)
+
+            pygame.display.update()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        self.change_state("StartGame")
+                    elif event.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        return
 
     def game_over(self):
         self.current_state = "GameOver"
@@ -106,7 +111,6 @@ class GameState:
         game_over_text = pygame.font.SysFont('Times New Roman', 50).render("GAME OVER", True, (255, 255, 255))
 
         text_rect = game_over_text.get_rect()
-
         text_rect.center = (screenWidth / 2, screenHeight / 2)
 
         screen.fill((0, 0, 0))
@@ -114,20 +118,28 @@ class GameState:
 
         pygame.display.update()
 
-        time_elapsed = 0
-        while time_elapsed < 5000:
-            pygame.time.delay(100)
-            time_elapsed += 100
-
+        waiting_for_input = True
+        while waiting_for_input:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
+                if event.type == pygame.KEYDOWN:
+                    waiting_for_input = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    waiting_for_input = False
 
         self.change_state("StartMenu")
 
     def start_game(self):
         self.current_state = "StartGame"
+
+        global pipe_list
+        pipe_list = []
+
+        first_pipe = Pipe()
+        first_pipe.make_pipe()
+
         while self.current_state == "StartGame":
             for event in pygame.event.get():
                 pressed = pygame.key.get_pressed()
@@ -151,5 +163,4 @@ class GameState:
             clock.tick(60)
 
 game_state = GameState()
-
-game_state.start_game()
+game_state.change_state("StartMenu")
